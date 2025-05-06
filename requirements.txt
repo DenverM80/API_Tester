@@ -1,0 +1,14 @@
+faker
+pytest
+pytest-html
+requests
+sphinx
+sphinx-autodoc-typehints
+
+## conda equivalents
+# conda install conda-forge::faker
+# conda install anaconda::pytest
+# conda install conda-forge::pytest-html
+# conda install anaconda::requests
+# conda install sphinx
+# conda install conda-forge::sphinx-autodoc-typehints

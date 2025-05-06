@@ -1,0 +1,1247 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8"/>
+    <title>Test Report</title>
+    <style>body {
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 12px;
+  /* do not increase min-width as some may use split screens */
+  min-width: 800px;
+  color: #999;
+}
+
+h1 {
+  font-size: 24px;
+  color: black;
+}
+
+h2 {
+  font-size: 16px;
+  color: black;
+}
+
+p {
+  color: black;
+}
+
+a {
+  color: #999;
+}
+
+table {
+  border-collapse: collapse;
+}
+
+/******************************
+ * SUMMARY INFORMATION
+ ******************************/
+#environment td {
+  padding: 5px;
+  border: 1px solid #E6E6E6;
+}
+#environment tr:nth-child(odd) {
+  background-color: #f6f6f6;
+}
+
+/******************************
+ * TEST RESULT COLORS
+ ******************************/
+span.passed,
+.passed .col-result {
+  color: green;
+}
+
+span.skipped,
+span.xfailed,
+span.rerun,
+.skipped .col-result,
+.xfailed .col-result,
+.rerun .col-result {
+  color: orange;
+}
+
+span.error,
+span.failed,
+span.xpassed,
+.error .col-result,
+.failed .col-result,
+.xpassed .col-result {
+  color: red;
+}
+
+/******************************
+ * RESULTS TABLE
+ *
+ * 1. Table Layout
+ * 2. Extra
+ * 3. Sorting items
+ *
+ ******************************/
+/*------------------
+ * 1. Table Layout
+ *------------------*/
+#results-table {
+  border: 1px solid #e6e6e6;
+  color: #999;
+  font-size: 12px;
+  width: 100%;
+}
+#results-table th,
+#results-table td {
+  padding: 5px;
+  border: 1px solid #E6E6E6;
+  text-align: left;
+}
+#results-table th {
+  font-weight: bold;
+}
+
+/*------------------
+ * 2. Extra
+ *------------------*/
+.log {
+  background-color: #e6e6e6;
+  border: 1px solid #e6e6e6;
+  color: black;
+  display: block;
+  font-family: "Courier New", Courier, monospace;
+  height: 230px;
+  overflow-y: scroll;
+  padding: 5px;
+  white-space: pre-wrap;
+}
+.log:only-child {
+  height: inherit;
+}
+
+div.image {
+  border: 1px solid #e6e6e6;
+  float: right;
+  height: 240px;
+  margin-left: 5px;
+  overflow: hidden;
+  width: 320px;
+}
+div.image img {
+  width: 320px;
+}
+
+div.video {
+  border: 1px solid #e6e6e6;
+  float: right;
+  height: 240px;
+  margin-left: 5px;
+  overflow: hidden;
+  width: 320px;
+}
+div.video video {
+  overflow: hidden;
+  width: 320px;
+  height: 240px;
+}
+
+.collapsed {
+  display: none;
+}
+
+.expander::after {
+  content: " (show details)";
+  color: #BBB;
+  font-style: italic;
+  cursor: pointer;
+}
+
+.collapser::after {
+  content: " (hide details)";
+  color: #BBB;
+  font-style: italic;
+  cursor: pointer;
+}
+
+/*------------------
+ * 3. Sorting items
+ *------------------*/
+.sortable {
+  cursor: pointer;
+}
+
+.sort-icon {
+  font-size: 0px;
+  float: left;
+  margin-right: 5px;
+  margin-top: 5px;
+  /*triangle*/
+  width: 0;
+  height: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+}
+.inactive .sort-icon {
+  /*finish triangle*/
+  border-top: 8px solid #E6E6E6;
+}
+.asc.active .sort-icon {
+  /*finish triangle*/
+  border-bottom: 8px solid #999;
+}
+.desc.active .sort-icon {
+  /*finish triangle*/
+  border-top: 8px solid #999;
+}
+</style></head>
+  <body onLoad="init()">
+    <script>/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this file,
+ * You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+
+function toArray(iter) {
+    if (iter === null) {
+        return null;
+    }
+    return Array.prototype.slice.call(iter);
+}
+
+function find(selector, elem) { // eslint-disable-line no-redeclare
+    if (!elem) {
+        elem = document;
+    }
+    return elem.querySelector(selector);
+}
+
+function findAll(selector, elem) {
+    if (!elem) {
+        elem = document;
+    }
+    return toArray(elem.querySelectorAll(selector));
+}
+
+function sortColumn(elem) {
+    toggleSortStates(elem);
+    const colIndex = toArray(elem.parentNode.childNodes).indexOf(elem);
+    let key;
+    if (elem.classList.contains('result')) {
+        key = keyResult;
+    } else if (elem.classList.contains('links')) {
+        key = keyLink;
+    } else {
+        key = keyAlpha;
+    }
+    sortTable(elem, key(colIndex));
+}
+
+function showAllExtras() { // eslint-disable-line no-unused-vars
+    findAll('.col-result').forEach(showExtras);
+}
+
+function hideAllExtras() { // eslint-disable-line no-unused-vars
+    findAll('.col-result').forEach(hideExtras);
+}
+
+function showExtras(colresultElem) {
+    const extras = colresultElem.parentNode.nextElementSibling;
+    const expandcollapse = colresultElem.firstElementChild;
+    extras.classList.remove('collapsed');
+    expandcollapse.classList.remove('expander');
+    expandcollapse.classList.add('collapser');
+}
+
+function hideExtras(colresultElem) {
+    const extras = colresultElem.parentNode.nextElementSibling;
+    const expandcollapse = colresultElem.firstElementChild;
+    extras.classList.add('collapsed');
+    expandcollapse.classList.remove('collapser');
+    expandcollapse.classList.add('expander');
+}
+
+function showFilters() {
+    const filterItems = document.getElementsByClassName('filter');
+    for (let i = 0; i < filterItems.length; i++)
+        filterItems[i].hidden = false;
+}
+
+function addCollapse() {
+    // Add links for show/hide all
+    const resulttable = find('table#results-table');
+    const showhideall = document.createElement('p');
+    showhideall.innerHTML = '<a href="javascript:showAllExtras()">Show all details</a> / ' +
+                            '<a href="javascript:hideAllExtras()">Hide all details</a>';
+    resulttable.parentElement.insertBefore(showhideall, resulttable);
+
+    // Add show/hide link to each result
+    findAll('.col-result').forEach(function(elem) {
+        const collapsed = getQueryParameter('collapsed') || 'Passed';
+        const extras = elem.parentNode.nextElementSibling;
+        const expandcollapse = document.createElement('span');
+        if (extras.classList.contains('collapsed')) {
+            expandcollapse.classList.add('expander');
+        } else if (collapsed.includes(elem.innerHTML)) {
+            extras.classList.add('collapsed');
+            expandcollapse.classList.add('expander');
+        } else {
+            expandcollapse.classList.add('collapser');
+        }
+        elem.appendChild(expandcollapse);
+
+        elem.addEventListener('click', function(event) {
+            if (event.currentTarget.parentNode.nextElementSibling.classList.contains('collapsed')) {
+                showExtras(event.currentTarget);
+            } else {
+                hideExtras(event.currentTarget);
+            }
+        });
+    });
+}
+
+function getQueryParameter(name) {
+    const match = RegExp('[?&]' + name + '=([^&]*)').exec(window.location.search);
+    return match && decodeURIComponent(match[1].replace(/\+/g, ' '));
+}
+
+function init () { // eslint-disable-line no-unused-vars
+    resetSortHeaders();
+
+    addCollapse();
+
+    showFilters();
+
+    sortColumn(find('.initial-sort'));
+
+    findAll('.sortable').forEach(function(elem) {
+        elem.addEventListener('click',
+            function() {
+                sortColumn(elem);
+            }, false);
+    });
+}
+
+function sortTable(clicked, keyFunc) {
+    const rows = findAll('.results-table-row');
+    const reversed = !clicked.classList.contains('asc');
+    const sortedRows = sort(rows, keyFunc, reversed);
+    /* Whole table is removed here because browsers acts much slower
+     * when appending existing elements.
+     */
+    const thead = document.getElementById('results-table-head');
+    document.getElementById('results-table').remove();
+    const parent = document.createElement('table');
+    parent.id = 'results-table';
+    parent.appendChild(thead);
+    sortedRows.forEach(function(elem) {
+        parent.appendChild(elem);
+    });
+    document.getElementsByTagName('BODY')[0].appendChild(parent);
+}
+
+function sort(items, keyFunc, reversed) {
+    const sortArray = items.map(function(item, i) {
+        return [keyFunc(item), i];
+    });
+
+    sortArray.sort(function(a, b) {
+        const keyA = a[0];
+        const keyB = b[0];
+
+        if (keyA == keyB) return 0;
+
+        if (reversed) {
+            return keyA < keyB ? 1 : -1;
+        } else {
+            return keyA > keyB ? 1 : -1;
+        }
+    });
+
+    return sortArray.map(function(item) {
+        const index = item[1];
+        return items[index];
+    });
+}
+
+function keyAlpha(colIndex) {
+    return function(elem) {
+        return elem.childNodes[1].childNodes[colIndex].firstChild.data.toLowerCase();
+    };
+}
+
+function keyLink(colIndex) {
+    return function(elem) {
+        const dataCell = elem.childNodes[1].childNodes[colIndex].firstChild;
+        return dataCell == null ? '' : dataCell.innerText.toLowerCase();
+    };
+}
+
+function keyResult(colIndex) {
+    return function(elem) {
+        const strings = ['Error', 'Failed', 'Rerun', 'XFailed', 'XPassed',
+            'Skipped', 'Passed'];
+        return strings.indexOf(elem.childNodes[1].childNodes[colIndex].firstChild.data);
+    };
+}
+
+function resetSortHeaders() {
+    findAll('.sort-icon').forEach(function(elem) {
+        elem.parentNode.removeChild(elem);
+    });
+    findAll('.sortable').forEach(function(elem) {
+        const icon = document.createElement('div');
+        icon.className = 'sort-icon';
+        icon.textContent = 'vvv';
+        elem.insertBefore(icon, elem.firstChild);
+        elem.classList.remove('desc', 'active');
+        elem.classList.add('asc', 'inactive');
+    });
+}
+
+function toggleSortStates(elem) {
+    //if active, toggle between asc and desc
+    if (elem.classList.contains('active')) {
+        elem.classList.toggle('asc');
+        elem.classList.toggle('desc');
+    }
+
+    //if inactive, reset all other functions and add ascending active
+    if (elem.classList.contains('inactive')) {
+        resetSortHeaders();
+        elem.classList.remove('inactive');
+        elem.classList.add('active');
+    }
+}
+
+function isAllRowsHidden(value) {
+    return value.hidden == false;
+}
+
+function filterTable(elem) { // eslint-disable-line no-unused-vars
+    const outcomeAtt = 'data-test-result';
+    const outcome = elem.getAttribute(outcomeAtt);
+    const classOutcome = outcome + ' results-table-row';
+    const outcomeRows = document.getElementsByClassName(classOutcome);
+
+    for(let i = 0; i < outcomeRows.length; i++){
+        outcomeRows[i].hidden = !elem.checked;
+    }
+
+    const rows = findAll('.results-table-row').filter(isAllRowsHidden);
+    const allRowsHidden = rows.length == 0 ? true : false;
+    const notFoundMessage = document.getElementById('not-found-message');
+    notFoundMessage.hidden = !allRowsHidden;
+}
+</script>
+    <h1>report.html</h1>
+    <p>Report generated on 06-May-2025 at 08:58:03 by <a href="https://pypi.python.org/pypi/pytest-html">pytest-html</a> v3.1.1</p>
+    <h2>Summary</h2>
+    <p>5 tests ran in 1.75 seconds. </p>
+    <p class="filter" hidden="true">(Un)check the boxes to filter the results.</p><input checked="true" class="filter" data-test-result="passed" hidden="true" name="filter_checkbox" onChange="filterTable(this)" type="checkbox"/><span class="passed">5 passed</span>, <input checked="true" class="filter" data-test-result="skipped" hidden="true" name="filter_checkbox" onChange="filterTable(this)" type="checkbox"/><span class="skipped">2 skipped</span>, <input checked="true" class="filter" data-test-result="failed" disabled="true" hidden="true" name="filter_checkbox" onChange="filterTable(this)" type="checkbox"/><span class="failed">0 failed</span>, <input checked="true" class="filter" data-test-result="error" disabled="true" hidden="true" name="filter_checkbox" onChange="filterTable(this)" type="checkbox"/><span class="error">0 errors</span>, <input checked="true" class="filter" data-test-result="xfailed" disabled="true" hidden="true" name="filter_checkbox" onChange="filterTable(this)" type="checkbox"/><span class="xfailed">0 expected failures</span>, <input checked="true" class="filter" data-test-result="xpassed" disabled="true" hidden="true" name="filter_checkbox" onChange="filterTable(this)" type="checkbox"/><span class="xpassed">0 unexpected passes</span>
+    <h2>Results</h2>
+    <table id="results-table">
+      <thead id="results-table-head">
+        <tr>
+          <th class="sortable result initial-sort" col="result">Result</th>
+          <th class="sortable" col="name">Test</th>
+          <th class="sortable" col="duration">Duration</th>
+          <th class="sortable links" col="links">Links</th></tr>
+        <tr hidden="true" id="not-found-message">
+          <th colspan="4">No results found. Try to check the filters</th></tr></thead>
+      <tbody class="skipped results-table-row">
+        <tr>
+          <td class="col-result">Skipped</td>
+          <td class="col-name">tests/test_users.py::TestUsers::test_create_100_users</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">(&#x27;/mnt/c/Users/Denver/code/api_regression_suite/tests/test_users.py&#x27;, 80, &#x27;Skipped: unconditional skip&#x27;)<br/></div></td></tr></tbody>
+      <tbody class="skipped results-table-row">
+        <tr>
+          <td class="col-result">Skipped</td>
+          <td class="col-name">tests/test_users.py::TestUsers::test_delete_unknown_user</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">(&#x27;/mnt/c/Users/Denver/code/api_regression_suite/tests/test_users.py&#x27;, 135, &#x27;Skipped: unconditional skip&#x27;)<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_users.py::TestUsers::test_get_all_users</td>
+          <td class="col-duration">0.07</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stderr call------------------------------ <br/>2025-05-06_08-58-02 - INFO: Test GET all users
+2025-05-06_08-58-02 - INFO: Getting all users...
+2025-05-06_08-58-02 - DEBUG: Received in get_users: [
+  {
+    &quot;id&quot;: 1,
+    &quot;name&quot;: &quot;Leanne Graham&quot;,
+    &quot;username&quot;: &quot;Bret&quot;,
+    &quot;email&quot;: &quot;Sincere@april.biz&quot;,
+    &quot;address&quot;: {
+      &quot;street&quot;: &quot;Kulas Light&quot;,
+      &quot;suite&quot;: &quot;Apt. 556&quot;,
+      &quot;city&quot;: &quot;Gwenborough&quot;,
+      &quot;zipcode&quot;: &quot;92998-3874&quot;,
+      &quot;geo&quot;: {
+        &quot;lat&quot;: &quot;-37.3159&quot;,
+        &quot;lng&quot;: &quot;81.1496&quot;
+      }
+    },
+    &quot;phone&quot;: &quot;1-770-736-8031 x56442&quot;,
+    &quot;website&quot;: &quot;hildegard.org&quot;,
+    &quot;company&quot;: {
+      &quot;name&quot;: &quot;Romaguera-Crona&quot;,
+      &quot;catchPhrase&quot;: &quot;Multi-layered client-server neural-net&quot;,
+      &quot;bs&quot;: &quot;harness real-time e-markets&quot;
+    }
+  },
+  {
+    &quot;id&quot;: 2,
+    &quot;name&quot;: &quot;Ervin Howell&quot;,
+    &quot;username&quot;: &quot;Antonette&quot;,
+    &quot;email&quot;: &quot;Shanna@melissa.tv&quot;,
+    &quot;address&quot;: {
+      &quot;street&quot;: &quot;Victor Plains&quot;,
+      &quot;suite&quot;: &quot;Suite 879&quot;,
+      &quot;city&quot;: &quot;Wisokyburgh&quot;,
+      &quot;zipcode&quot;: &quot;90566-7771&quot;,
+      &quot;geo&quot;: {
+        &quot;lat&quot;: &quot;-43.9509&quot;,
+        &quot;lng&quot;: &quot;-34.4618&quot;
+      }
+    },
+    &quot;phone&quot;: &quot;010-692-6593 x09125&quot;,
+    &quot;website&quot;: &quot;anastasia.net&quot;,
+    &quot;company&quot;: {
+      &quot;name&quot;: &quot;Deckow-Crist&quot;,
+      &quot;catchPhrase&quot;: &quot;Proactive didactic contingency&quot;,
+      &quot;bs&quot;: &quot;synergize scalable supply-chains&quot;
+    }
+  },
+  {
+    &quot;id&quot;: 3,
+    &quot;name&quot;: &quot;Clementine Bauch&quot;,
+    &quot;username&quot;: &quot;Samantha&quot;,
+    &quot;email&quot;: &quot;Nathan@yesenia.net&quot;,
+    &quot;address&quot;: {
+      &quot;street&quot;: &quot;Douglas Extension&quot;,
+      &quot;suite&quot;: &quot;Suite 847&quot;,
+      &quot;city&quot;: &quot;McKenziehaven&quot;,
+      &quot;zipcode&quot;: &quot;59590-4157&quot;,
+      &quot;geo&quot;: {
+        &quot;lat&quot;: &quot;-68.6102&quot;,
+        &quot;lng&quot;: &quot;-47.0653&quot;
+      }
+    },
+    &quot;phone&quot;: &quot;1-463-123-4447&quot;,
+    &quot;website&quot;: &quot;ramiro.info&quot;,
+    &quot;company&quot;: {
+      &quot;name&quot;: &quot;Romaguera-Jacobson&quot;,
+      &quot;catchPhrase&quot;: &quot;Face to face bifurcated interface&quot;,
+      &quot;bs&quot;: &quot;e-enable strategic applications&quot;
+    }
+  },
+  {
+    &quot;id&quot;: 4,
+    &quot;name&quot;: &quot;Patricia Lebsack&quot;,
+    &quot;username&quot;: &quot;Karianne&quot;,
+    &quot;email&quot;: &quot;Julianne.OConner@kory.org&quot;,
+    &quot;address&quot;: {
+      &quot;street&quot;: &quot;Hoeger Mall&quot;,
+      &quot;suite&quot;: &quot;Apt. 692&quot;,
+      &quot;city&quot;: &quot;South Elvis&quot;,
+      &quot;zipcode&quot;: &quot;53919-4257&quot;,
+      &quot;geo&quot;: {
+        &quot;lat&quot;: &quot;29.4572&quot;,
+        &quot;lng&quot;: &quot;-164.2990&quot;
+      }
+    },
+    &quot;phone&quot;: &quot;493-170-9623 x156&quot;,
+    &quot;website&quot;: &quot;kale.biz&quot;,
+    &quot;company&quot;: {
+      &quot;name&quot;: &quot;Robel-Corkery&quot;,
+      &quot;catchPhrase&quot;: &quot;Multi-tiered zero tolerance productivity&quot;,
+      &quot;bs&quot;: &quot;transition cutting-edge web services&quot;
+    }
+  },
+  {
+    &quot;id&quot;: 5,
+    &quot;name&quot;: &quot;Chelsey Dietrich&quot;,
+    &quot;username&quot;: &quot;Kamren&quot;,
+    &quot;email&quot;: &quot;Lucio_Hettinger@annie.ca&quot;,
+    &quot;address&quot;: {
+      &quot;street&quot;: &quot;Skiles Walks&quot;,
+      &quot;suite&quot;: &quot;Suite 351&quot;,
+      &quot;city&quot;: &quot;Roscoeview&quot;,
+      &quot;zipcode&quot;: &quot;33263&quot;,
+      &quot;geo&quot;: {
+        &quot;lat&quot;: &quot;-31.8129&quot;,
+        &quot;lng&quot;: &quot;62.5342&quot;
+      }
+    },
+    &quot;phone&quot;: &quot;(254)954-1289&quot;,
+    &quot;website&quot;: &quot;demarco.info&quot;,
+    &quot;company&quot;: {
+      &quot;name&quot;: &quot;Keebler LLC&quot;,
+      &quot;catchPhrase&quot;: &quot;User-centric fault-tolerant solution&quot;,
+      &quot;bs&quot;: &quot;revolutionize end-to-end systems&quot;
+    }
+  },
+  {
+    &quot;id&quot;: 6,
+    &quot;name&quot;: &quot;Mrs. Dennis Schulist&quot;,
+    &quot;username&quot;: &quot;Leopoldo_Corkery&quot;,
+    &quot;email&quot;: &quot;Karley_Dach@jasper.info&quot;,
+    &quot;address&quot;: {
+      &quot;street&quot;: &quot;Norberto Crossing&quot;,
+      &quot;suite&quot;: &quot;Apt. 950&quot;,
+      &quot;city&quot;: &quot;South Christy&quot;,
+      &quot;zipcode&quot;: &quot;23505-1337&quot;,
+      &quot;geo&quot;: {
+        &quot;lat&quot;: &quot;-71.4197&quot;,
+        &quot;lng&quot;: &quot;71.7478&quot;
+      }
+    },
+    &quot;phone&quot;: &quot;1-477-935-8478 x6430&quot;,
+    &quot;website&quot;: &quot;ola.org&quot;,
+    &quot;company&quot;: {
+      &quot;name&quot;: &quot;Considine-Lockman&quot;,
+      &quot;catchPhrase&quot;: &quot;Synchronised bottom-line interface&quot;,
+      &quot;bs&quot;: &quot;e-enable innovative applications&quot;
+    }
+  },
+  {
+    &quot;id&quot;: 7,
+    &quot;name&quot;: &quot;Kurtis Weissnat&quot;,
+    &quot;username&quot;: &quot;Elwyn.Skiles&quot;,
+    &quot;email&quot;: &quot;Telly.Hoeger@billy.biz&quot;,
+    &quot;address&quot;: {
+      &quot;street&quot;: &quot;Rex Trail&quot;,
+      &quot;suite&quot;: &quot;Suite 280&quot;,
+      &quot;city&quot;: &quot;Howemouth&quot;,
+      &quot;zipcode&quot;: &quot;58804-1099&quot;,
+      &quot;geo&quot;: {
+        &quot;lat&quot;: &quot;24.8918&quot;,
+        &quot;lng&quot;: &quot;21.8984&quot;
+      }
+    },
+    &quot;phone&quot;: &quot;210.067.6132&quot;,
+    &quot;website&quot;: &quot;elvis.io&quot;,
+    &quot;company&quot;: {
+      &quot;name&quot;: &quot;Johns Group&quot;,
+      &quot;catchPhrase&quot;: &quot;Configurable multimedia task-force&quot;,
+      &quot;bs&quot;: &quot;generate enterprise e-tailers&quot;
+    }
+  },
+  {
+    &quot;id&quot;: 8,
+    &quot;name&quot;: &quot;Nicholas Runolfsdottir V&quot;,
+    &quot;username&quot;: &quot;Maxime_Nienow&quot;,
+    &quot;email&quot;: &quot;Sherwood@rosamond.me&quot;,
+    &quot;address&quot;: {
+      &quot;street&quot;: &quot;Ellsworth Summit&quot;,
+      &quot;suite&quot;: &quot;Suite 729&quot;,
+      &quot;city&quot;: &quot;Aliyaview&quot;,
+      &quot;zipcode&quot;: &quot;45169&quot;,
+      &quot;geo&quot;: {
+        &quot;lat&quot;: &quot;-14.3990&quot;,
+        &quot;lng&quot;: &quot;-120.7677&quot;
+      }
+    },
+    &quot;phone&quot;: &quot;586.493.6943 x140&quot;,
+    &quot;website&quot;: &quot;jacynthe.com&quot;,
+    &quot;company&quot;: {
+      &quot;name&quot;: &quot;Abernathy Group&quot;,
+      &quot;catchPhrase&quot;: &quot;Implemented secondary concept&quot;,
+      &quot;bs&quot;: &quot;e-enable extensible e-tailers&quot;
+    }
+  },
+  {
+    &quot;id&quot;: 9,
+    &quot;name&quot;: &quot;Glenna Reichert&quot;,
+    &quot;username&quot;: &quot;Delphine&quot;,
+    &quot;email&quot;: &quot;Chaim_McDermott@dana.io&quot;,
+    &quot;address&quot;: {
+      &quot;street&quot;: &quot;Dayna Park&quot;,
+      &quot;suite&quot;: &quot;Suite 449&quot;,
+      &quot;city&quot;: &quot;Bartholomebury&quot;,
+      &quot;zipcode&quot;: &quot;76495-3109&quot;,
+      &quot;geo&quot;: {
+        &quot;lat&quot;: &quot;24.6463&quot;,
+        &quot;lng&quot;: &quot;-168.8889&quot;
+      }
+    },
+    &quot;phone&quot;: &quot;(775)976-6794 x41206&quot;,
+    &quot;website&quot;: &quot;conrad.com&quot;,
+    &quot;company&quot;: {
+      &quot;name&quot;: &quot;Yost and Sons&quot;,
+      &quot;catchPhrase&quot;: &quot;Switchable contextually-based project&quot;,
+      &quot;bs&quot;: &quot;aggregate real-time technologies&quot;
+    }
+  },
+  {
+    &quot;id&quot;: 10,
+    &quot;name&quot;: &quot;Clementina DuBuque&quot;,
+    &quot;username&quot;: &quot;Moriah.Stanton&quot;,
+    &quot;email&quot;: &quot;Rey.Padberg@karina.biz&quot;,
+    &quot;address&quot;: {
+      &quot;street&quot;: &quot;Kattie Turnpike&quot;,
+      &quot;suite&quot;: &quot;Suite 198&quot;,
+      &quot;city&quot;: &quot;Lebsackbury&quot;,
+      &quot;zipcode&quot;: &quot;31428-2261&quot;,
+      &quot;geo&quot;: {
+        &quot;lat&quot;: &quot;-38.2386&quot;,
+        &quot;lng&quot;: &quot;57.2232&quot;
+      }
+    },
+    &quot;phone&quot;: &quot;024-648-3804&quot;,
+    &quot;website&quot;: &quot;ambrose.net&quot;,
+    &quot;company&quot;: {
+      &quot;name&quot;: &quot;Hoeger LLC&quot;,
+      &quot;catchPhrase&quot;: &quot;Centralized empowering task-force&quot;,
+      &quot;bs&quot;: &quot;target end-to-end models&quot;
+    }
+  }
+]
+2025-05-06_08-58-02 - DEBUG: 10
+<br/> -------------------------------Captured log call-------------------------------- <br/>INFO     anaApiTestLogger:test_users.py:24 Test GET all users
+INFO     anaApiTestLogger:user_actions.py:25 Getting all users...
+DEBUG    anaApiTestLogger:user_actions.py:27 Received in get_users: [
+  {
+    &quot;id&quot;: 1,
+    &quot;name&quot;: &quot;Leanne Graham&quot;,
+    &quot;username&quot;: &quot;Bret&quot;,
+    &quot;email&quot;: &quot;Sincere@april.biz&quot;,
+    &quot;address&quot;: {
+      &quot;street&quot;: &quot;Kulas Light&quot;,
+      &quot;suite&quot;: &quot;Apt. 556&quot;,
+      &quot;city&quot;: &quot;Gwenborough&quot;,
+      &quot;zipcode&quot;: &quot;92998-3874&quot;,
+      &quot;geo&quot;: {
+        &quot;lat&quot;: &quot;-37.3159&quot;,
+        &quot;lng&quot;: &quot;81.1496&quot;
+      }
+    },
+    &quot;phone&quot;: &quot;1-770-736-8031 x56442&quot;,
+    &quot;website&quot;: &quot;hildegard.org&quot;,
+    &quot;company&quot;: {
+      &quot;name&quot;: &quot;Romaguera-Crona&quot;,
+      &quot;catchPhrase&quot;: &quot;Multi-layered client-server neural-net&quot;,
+      &quot;bs&quot;: &quot;harness real-time e-markets&quot;
+    }
+  },
+  {
+    &quot;id&quot;: 2,
+    &quot;name&quot;: &quot;Ervin Howell&quot;,
+    &quot;username&quot;: &quot;Antonette&quot;,
+    &quot;email&quot;: &quot;Shanna@melissa.tv&quot;,
+    &quot;address&quot;: {
+      &quot;street&quot;: &quot;Victor Plains&quot;,
+      &quot;suite&quot;: &quot;Suite 879&quot;,
+      &quot;city&quot;: &quot;Wisokyburgh&quot;,
+      &quot;zipcode&quot;: &quot;90566-7771&quot;,
+      &quot;geo&quot;: {
+        &quot;lat&quot;: &quot;-43.9509&quot;,
+        &quot;lng&quot;: &quot;-34.4618&quot;
+      }
+    },
+    &quot;phone&quot;: &quot;010-692-6593 x09125&quot;,
+    &quot;website&quot;: &quot;anastasia.net&quot;,
+    &quot;company&quot;: {
+      &quot;name&quot;: &quot;Deckow-Crist&quot;,
+      &quot;catchPhrase&quot;: &quot;Proactive didactic contingency&quot;,
+      &quot;bs&quot;: &quot;synergize scalable supply-chains&quot;
+    }
+  },
+  {
+    &quot;id&quot;: 3,
+    &quot;name&quot;: &quot;Clementine Bauch&quot;,
+    &quot;username&quot;: &quot;Samantha&quot;,
+    &quot;email&quot;: &quot;Nathan@yesenia.net&quot;,
+    &quot;address&quot;: {
+      &quot;street&quot;: &quot;Douglas Extension&quot;,
+      &quot;suite&quot;: &quot;Suite 847&quot;,
+      &quot;city&quot;: &quot;McKenziehaven&quot;,
+      &quot;zipcode&quot;: &quot;59590-4157&quot;,
+      &quot;geo&quot;: {
+        &quot;lat&quot;: &quot;-68.6102&quot;,
+        &quot;lng&quot;: &quot;-47.0653&quot;
+      }
+    },
+    &quot;phone&quot;: &quot;1-463-123-4447&quot;,
+    &quot;website&quot;: &quot;ramiro.info&quot;,
+    &quot;company&quot;: {
+      &quot;name&quot;: &quot;Romaguera-Jacobson&quot;,
+      &quot;catchPhrase&quot;: &quot;Face to face bifurcated interface&quot;,
+      &quot;bs&quot;: &quot;e-enable strategic applications&quot;
+    }
+  },
+  {
+    &quot;id&quot;: 4,
+    &quot;name&quot;: &quot;Patricia Lebsack&quot;,
+    &quot;username&quot;: &quot;Karianne&quot;,
+    &quot;email&quot;: &quot;Julianne.OConner@kory.org&quot;,
+    &quot;address&quot;: {
+      &quot;street&quot;: &quot;Hoeger Mall&quot;,
+      &quot;suite&quot;: &quot;Apt. 692&quot;,
+      &quot;city&quot;: &quot;South Elvis&quot;,
+      &quot;zipcode&quot;: &quot;53919-4257&quot;,
+      &quot;geo&quot;: {
+        &quot;lat&quot;: &quot;29.4572&quot;,
+        &quot;lng&quot;: &quot;-164.2990&quot;
+      }
+    },
+    &quot;phone&quot;: &quot;493-170-9623 x156&quot;,
+    &quot;website&quot;: &quot;kale.biz&quot;,
+    &quot;company&quot;: {
+      &quot;name&quot;: &quot;Robel-Corkery&quot;,
+      &quot;catchPhrase&quot;: &quot;Multi-tiered zero tolerance productivity&quot;,
+      &quot;bs&quot;: &quot;transition cutting-edge web services&quot;
+    }
+  },
+  {
+    &quot;id&quot;: 5,
+    &quot;name&quot;: &quot;Chelsey Dietrich&quot;,
+    &quot;username&quot;: &quot;Kamren&quot;,
+    &quot;email&quot;: &quot;Lucio_Hettinger@annie.ca&quot;,
+    &quot;address&quot;: {
+      &quot;street&quot;: &quot;Skiles Walks&quot;,
+      &quot;suite&quot;: &quot;Suite 351&quot;,
+      &quot;city&quot;: &quot;Roscoeview&quot;,
+      &quot;zipcode&quot;: &quot;33263&quot;,
+      &quot;geo&quot;: {
+        &quot;lat&quot;: &quot;-31.8129&quot;,
+        &quot;lng&quot;: &quot;62.5342&quot;
+      }
+    },
+    &quot;phone&quot;: &quot;(254)954-1289&quot;,
+    &quot;website&quot;: &quot;demarco.info&quot;,
+    &quot;company&quot;: {
+      &quot;name&quot;: &quot;Keebler LLC&quot;,
+      &quot;catchPhrase&quot;: &quot;User-centric fault-tolerant solution&quot;,
+      &quot;bs&quot;: &quot;revolutionize end-to-end systems&quot;
+    }
+  },
+  {
+    &quot;id&quot;: 6,
+    &quot;name&quot;: &quot;Mrs. Dennis Schulist&quot;,
+    &quot;username&quot;: &quot;Leopoldo_Corkery&quot;,
+    &quot;email&quot;: &quot;Karley_Dach@jasper.info&quot;,
+    &quot;address&quot;: {
+      &quot;street&quot;: &quot;Norberto Crossing&quot;,
+      &quot;suite&quot;: &quot;Apt. 950&quot;,
+      &quot;city&quot;: &quot;South Christy&quot;,
+      &quot;zipcode&quot;: &quot;23505-1337&quot;,
+      &quot;geo&quot;: {
+        &quot;lat&quot;: &quot;-71.4197&quot;,
+        &quot;lng&quot;: &quot;71.7478&quot;
+      }
+    },
+    &quot;phone&quot;: &quot;1-477-935-8478 x6430&quot;,
+    &quot;website&quot;: &quot;ola.org&quot;,
+    &quot;company&quot;: {
+      &quot;name&quot;: &quot;Considine-Lockman&quot;,
+      &quot;catchPhrase&quot;: &quot;Synchronised bottom-line interface&quot;,
+      &quot;bs&quot;: &quot;e-enable innovative applications&quot;
+    }
+  },
+  {
+    &quot;id&quot;: 7,
+    &quot;name&quot;: &quot;Kurtis Weissnat&quot;,
+    &quot;username&quot;: &quot;Elwyn.Skiles&quot;,
+    &quot;email&quot;: &quot;Telly.Hoeger@billy.biz&quot;,
+    &quot;address&quot;: {
+      &quot;street&quot;: &quot;Rex Trail&quot;,
+      &quot;suite&quot;: &quot;Suite 280&quot;,
+      &quot;city&quot;: &quot;Howemouth&quot;,
+      &quot;zipcode&quot;: &quot;58804-1099&quot;,
+      &quot;geo&quot;: {
+        &quot;lat&quot;: &quot;24.8918&quot;,
+        &quot;lng&quot;: &quot;21.8984&quot;
+      }
+    },
+    &quot;phone&quot;: &quot;210.067.6132&quot;,
+    &quot;website&quot;: &quot;elvis.io&quot;,
+    &quot;company&quot;: {
+      &quot;name&quot;: &quot;Johns Group&quot;,
+      &quot;catchPhrase&quot;: &quot;Configurable multimedia task-force&quot;,
+      &quot;bs&quot;: &quot;generate enterprise e-tailers&quot;
+    }
+  },
+  {
+    &quot;id&quot;: 8,
+    &quot;name&quot;: &quot;Nicholas Runolfsdottir V&quot;,
+    &quot;username&quot;: &quot;Maxime_Nienow&quot;,
+    &quot;email&quot;: &quot;Sherwood@rosamond.me&quot;,
+    &quot;address&quot;: {
+      &quot;street&quot;: &quot;Ellsworth Summit&quot;,
+      &quot;suite&quot;: &quot;Suite 729&quot;,
+      &quot;city&quot;: &quot;Aliyaview&quot;,
+      &quot;zipcode&quot;: &quot;45169&quot;,
+      &quot;geo&quot;: {
+        &quot;lat&quot;: &quot;-14.3990&quot;,
+        &quot;lng&quot;: &quot;-120.7677&quot;
+      }
+    },
+    &quot;phone&quot;: &quot;586.493.6943 x140&quot;,
+    &quot;website&quot;: &quot;jacynthe.com&quot;,
+    &quot;company&quot;: {
+      &quot;name&quot;: &quot;Abernathy Group&quot;,
+      &quot;catchPhrase&quot;: &quot;Implemented secondary concept&quot;,
+      &quot;bs&quot;: &quot;e-enable extensible e-tailers&quot;
+    }
+  },
+  {
+    &quot;id&quot;: 9,
+    &quot;name&quot;: &quot;Glenna Reichert&quot;,
+    &quot;username&quot;: &quot;Delphine&quot;,
+    &quot;email&quot;: &quot;Chaim_McDermott@dana.io&quot;,
+    &quot;address&quot;: {
+      &quot;street&quot;: &quot;Dayna Park&quot;,
+      &quot;suite&quot;: &quot;Suite 449&quot;,
+      &quot;city&quot;: &quot;Bartholomebury&quot;,
+      &quot;zipcode&quot;: &quot;76495-3109&quot;,
+      &quot;geo&quot;: {
+        &quot;lat&quot;: &quot;24.6463&quot;,
+        &quot;lng&quot;: &quot;-168.8889&quot;
+      }
+    },
+    &quot;phone&quot;: &quot;(775)976-6794 x41206&quot;,
+    &quot;website&quot;: &quot;conrad.com&quot;,
+    &quot;company&quot;: {
+      &quot;name&quot;: &quot;Yost and Sons&quot;,
+      &quot;catchPhrase&quot;: &quot;Switchable contextually-based project&quot;,
+      &quot;bs&quot;: &quot;aggregate real-time technologies&quot;
+    }
+  },
+  {
+    &quot;id&quot;: 10,
+    &quot;name&quot;: &quot;Clementina DuBuque&quot;,
+    &quot;username&quot;: &quot;Moriah.Stanton&quot;,
+    &quot;email&quot;: &quot;Rey.Padberg@karina.biz&quot;,
+    &quot;address&quot;: {
+      &quot;street&quot;: &quot;Kattie Turnpike&quot;,
+      &quot;suite&quot;: &quot;Suite 198&quot;,
+      &quot;city&quot;: &quot;Lebsackbury&quot;,
+      &quot;zipcode&quot;: &quot;31428-2261&quot;,
+      &quot;geo&quot;: {
+        &quot;lat&quot;: &quot;-38.2386&quot;,
+        &quot;lng&quot;: &quot;57.2232&quot;
+      }
+    },
+    &quot;phone&quot;: &quot;024-648-3804&quot;,
+    &quot;website&quot;: &quot;ambrose.net&quot;,
+    &quot;company&quot;: {
+      &quot;name&quot;: &quot;Hoeger LLC&quot;,
+      &quot;catchPhrase&quot;: &quot;Centralized empowering task-force&quot;,
+      &quot;bs&quot;: &quot;target end-to-end models&quot;
+    }
+  }
+]
+DEBUG    anaApiTestLogger:user_actions.py:28 10<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_users.py::TestUsers::test_get_user_by_id</td>
+          <td class="col-duration">0.02</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stderr call------------------------------ <br/>2025-05-06_08-58-02 - INFO: Test GET user by id
+2025-05-06_08-58-02 - INFO: Getting user 1...
+2025-05-06_08-58-02 - DEBUG: Received in get_user_by_id: {
+  &quot;id&quot;: 1,
+  &quot;name&quot;: &quot;Leanne Graham&quot;,
+  &quot;username&quot;: &quot;Bret&quot;,
+  &quot;email&quot;: &quot;Sincere@april.biz&quot;,
+  &quot;address&quot;: {
+    &quot;street&quot;: &quot;Kulas Light&quot;,
+    &quot;suite&quot;: &quot;Apt. 556&quot;,
+    &quot;city&quot;: &quot;Gwenborough&quot;,
+    &quot;zipcode&quot;: &quot;92998-3874&quot;,
+    &quot;geo&quot;: {
+      &quot;lat&quot;: &quot;-37.3159&quot;,
+      &quot;lng&quot;: &quot;81.1496&quot;
+    }
+  },
+  &quot;phone&quot;: &quot;1-770-736-8031 x56442&quot;,
+  &quot;website&quot;: &quot;hildegard.org&quot;,
+  &quot;company&quot;: {
+    &quot;name&quot;: &quot;Romaguera-Crona&quot;,
+    &quot;catchPhrase&quot;: &quot;Multi-layered client-server neural-net&quot;,
+    &quot;bs&quot;: &quot;harness real-time e-markets&quot;
+  }
+}
+<br/> -------------------------------Captured log call-------------------------------- <br/>INFO     anaApiTestLogger:test_users.py:40 Test GET user by id
+INFO     anaApiTestLogger:user_actions.py:47 Getting user 1...
+DEBUG    anaApiTestLogger:user_actions.py:49 Received in get_user_by_id: {
+  &quot;id&quot;: 1,
+  &quot;name&quot;: &quot;Leanne Graham&quot;,
+  &quot;username&quot;: &quot;Bret&quot;,
+  &quot;email&quot;: &quot;Sincere@april.biz&quot;,
+  &quot;address&quot;: {
+    &quot;street&quot;: &quot;Kulas Light&quot;,
+    &quot;suite&quot;: &quot;Apt. 556&quot;,
+    &quot;city&quot;: &quot;Gwenborough&quot;,
+    &quot;zipcode&quot;: &quot;92998-3874&quot;,
+    &quot;geo&quot;: {
+      &quot;lat&quot;: &quot;-37.3159&quot;,
+      &quot;lng&quot;: &quot;81.1496&quot;
+    }
+  },
+  &quot;phone&quot;: &quot;1-770-736-8031 x56442&quot;,
+  &quot;website&quot;: &quot;hildegard.org&quot;,
+  &quot;company&quot;: {
+    &quot;name&quot;: &quot;Romaguera-Crona&quot;,
+    &quot;catchPhrase&quot;: &quot;Multi-layered client-server neural-net&quot;,
+    &quot;bs&quot;: &quot;harness real-time e-markets&quot;
+  }
+}<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_users.py::TestUsers::test_get_unknown_user</td>
+          <td class="col-duration">0.30</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stderr call------------------------------ <br/>2025-05-06_08-58-02 - INFO: Test GET unknown user id 42 fails gracefully
+2025-05-06_08-58-02 - INFO: Getting user 42...
+2025-05-06_08-58-02 - DEBUG: Received in get_user_by_id: {}
+2025-05-06_08-58-02 - WARNING: Non success response[404]
+<br/> -------------------------------Captured log call-------------------------------- <br/>INFO     anaApiTestLogger:test_users.py:56 Test GET unknown user id 42 fails gracefully
+INFO     anaApiTestLogger:user_actions.py:47 Getting user 42...
+DEBUG    anaApiTestLogger:user_actions.py:49 Received in get_user_by_id: {}
+WARNING  anaApiTestLogger:user_actions.py:52 Non success response[404]<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_users.py::TestUsers::test_create_user</td>
+          <td class="col-duration">0.49</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stderr call------------------------------ <br/>2025-05-06_08-58-02 - INFO: Test create user
+2025-05-06_08-58-02 - INFO: Creating user: Joseph Patterson...
+2025-05-06_08-58-02 - DEBUG: {
+  &quot;name&quot;: &quot;Joseph Patterson&quot;,
+  &quot;username&quot;: &quot;cassie56&quot;,
+  &quot;email&quot;: &quot;georgelindsay@example.com&quot;,
+  &quot;address&quot;: {
+    &quot;street&quot;: &quot;131 Jeffrey Rapid Apt. 471&quot;,
+    &quot;suite&quot;: &quot;999&quot;,
+    &quot;city&quot;: &quot;West Vincent&quot;,
+    &quot;zipcode&quot;: &quot;00992&quot;,
+    &quot;geo&quot;: {
+      &quot;lat&quot;: &quot;25.1817235&quot;,
+      &quot;lng&quot;: &quot;-155.736845&quot;
+    }
+  },
+  &quot;phone&quot;: &quot;8068021771&quot;,
+  &quot;website&quot;: &quot;search&quot;,
+  &quot;company&quot;: {
+    &quot;name&quot;: &quot;Williams Group&quot;,
+    &quot;catch_phrase&quot;: &quot;Team-oriented directional leverage&quot;,
+    &quot;bs&quot;: &quot;Mr adult able do make.&quot;
+  }
+}...
+2025-05-06_08-58-02 - DEBUG: Received in create_user: {
+  &quot;name&quot;: &quot;Joseph Patterson&quot;,
+  &quot;username&quot;: &quot;cassie56&quot;,
+  &quot;email&quot;: &quot;georgelindsay@example.com&quot;,
+  &quot;address&quot;: {
+    &quot;street&quot;: &quot;131 Jeffrey Rapid Apt. 471&quot;,
+    &quot;suite&quot;: &quot;999&quot;,
+    &quot;city&quot;: &quot;West Vincent&quot;,
+    &quot;zipcode&quot;: &quot;00992&quot;,
+    &quot;geo&quot;: {
+      &quot;lat&quot;: &quot;25.1817235&quot;,
+      &quot;lng&quot;: &quot;-155.736845&quot;
+    }
+  },
+  &quot;phone&quot;: &quot;8068021771&quot;,
+  &quot;website&quot;: &quot;search&quot;,
+  &quot;company&quot;: {
+    &quot;name&quot;: &quot;Williams Group&quot;,
+    &quot;catch_phrase&quot;: &quot;Team-oriented directional leverage&quot;,
+    &quot;bs&quot;: &quot;Mr adult able do make.&quot;
+  },
+  &quot;id&quot;: 11
+}
+2025-05-06_08-58-02 - INFO: Deleting user: 11...
+2025-05-06_08-58-02 - DEBUG: Received status 200 in delete_user: {}
+<br/> -------------------------------Captured log call-------------------------------- <br/>INFO     anaApiTestLogger:test_users.py:72 Test create user
+INFO     anaApiTestLogger:user_actions.py:69 Creating user: Joseph Patterson...
+DEBUG    anaApiTestLogger:user_actions.py:72 {
+  &quot;name&quot;: &quot;Joseph Patterson&quot;,
+  &quot;username&quot;: &quot;cassie56&quot;,
+  &quot;email&quot;: &quot;georgelindsay@example.com&quot;,
+  &quot;address&quot;: {
+    &quot;street&quot;: &quot;131 Jeffrey Rapid Apt. 471&quot;,
+    &quot;suite&quot;: &quot;999&quot;,
+    &quot;city&quot;: &quot;West Vincent&quot;,
+    &quot;zipcode&quot;: &quot;00992&quot;,
+    &quot;geo&quot;: {
+      &quot;lat&quot;: &quot;25.1817235&quot;,
+      &quot;lng&quot;: &quot;-155.736845&quot;
+    }
+  },
+  &quot;phone&quot;: &quot;8068021771&quot;,
+  &quot;website&quot;: &quot;search&quot;,
+  &quot;company&quot;: {
+    &quot;name&quot;: &quot;Williams Group&quot;,
+    &quot;catch_phrase&quot;: &quot;Team-oriented directional leverage&quot;,
+    &quot;bs&quot;: &quot;Mr adult able do make.&quot;
+  }
+}...
+DEBUG    anaApiTestLogger:user_actions.py:74 Received in create_user: {
+  &quot;name&quot;: &quot;Joseph Patterson&quot;,
+  &quot;username&quot;: &quot;cassie56&quot;,
+  &quot;email&quot;: &quot;georgelindsay@example.com&quot;,
+  &quot;address&quot;: {
+    &quot;street&quot;: &quot;131 Jeffrey Rapid Apt. 471&quot;,
+    &quot;suite&quot;: &quot;999&quot;,
+    &quot;city&quot;: &quot;West Vincent&quot;,
+    &quot;zipcode&quot;: &quot;00992&quot;,
+    &quot;geo&quot;: {
+      &quot;lat&quot;: &quot;25.1817235&quot;,
+      &quot;lng&quot;: &quot;-155.736845&quot;
+    }
+  },
+  &quot;phone&quot;: &quot;8068021771&quot;,
+  &quot;website&quot;: &quot;search&quot;,
+  &quot;company&quot;: {
+    &quot;name&quot;: &quot;Williams Group&quot;,
+    &quot;catch_phrase&quot;: &quot;Team-oriented directional leverage&quot;,
+    &quot;bs&quot;: &quot;Mr adult able do make.&quot;
+  },
+  &quot;id&quot;: 11
+}
+INFO     anaApiTestLogger:user_actions.py:117 Deleting user: 11...
+DEBUG    anaApiTestLogger:user_actions.py:119 Received status 200 in delete_user: {}<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_users.py::TestUsers::test_crud_user</td>
+          <td class="col-duration">0.74</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stderr call------------------------------ <br/>2025-05-06_08-58-02 - INFO: Test CRUD user
+2025-05-06_08-58-02 - INFO: Creating user: Olivia Black...
+2025-05-06_08-58-02 - DEBUG: {
+  &quot;name&quot;: &quot;Olivia Black&quot;,
+  &quot;username&quot;: &quot;tanya69&quot;,
+  &quot;email&quot;: &quot;ztaylor@example.org&quot;,
+  &quot;address&quot;: {
+    &quot;street&quot;: &quot;82151 Lawrence Drive Suite 193&quot;,
+    &quot;suite&quot;: &quot;65110&quot;,
+    &quot;city&quot;: &quot;Lake Raymond&quot;,
+    &quot;zipcode&quot;: &quot;49850&quot;,
+    &quot;geo&quot;: {
+      &quot;lat&quot;: &quot;65.860561&quot;,
+      &quot;lng&quot;: &quot;-128.499956&quot;
+    }
+  },
+  &quot;phone&quot;: &quot;(243)997-4848x4603&quot;,
+  &quot;website&quot;: &quot;register&quot;,
+  &quot;company&quot;: {
+    &quot;name&quot;: &quot;Vazquez, Neal and Miller&quot;,
+    &quot;catch_phrase&quot;: &quot;Ergonomic 4thgeneration initiative&quot;,
+    &quot;bs&quot;: &quot;Black month radio foreign hotel.&quot;
+  }
+}...
+2025-05-06_08-58-03 - DEBUG: Received in create_user: {
+  &quot;name&quot;: &quot;Olivia Black&quot;,
+  &quot;username&quot;: &quot;tanya69&quot;,
+  &quot;email&quot;: &quot;ztaylor@example.org&quot;,
+  &quot;address&quot;: {
+    &quot;street&quot;: &quot;82151 Lawrence Drive Suite 193&quot;,
+    &quot;suite&quot;: &quot;65110&quot;,
+    &quot;city&quot;: &quot;Lake Raymond&quot;,
+    &quot;zipcode&quot;: &quot;49850&quot;,
+    &quot;geo&quot;: {
+      &quot;lat&quot;: &quot;65.860561&quot;,
+      &quot;lng&quot;: &quot;-128.499956&quot;
+    }
+  },
+  &quot;phone&quot;: &quot;(243)997-4848x4603&quot;,
+  &quot;website&quot;: &quot;register&quot;,
+  &quot;company&quot;: {
+    &quot;name&quot;: &quot;Vazquez, Neal and Miller&quot;,
+    &quot;catch_phrase&quot;: &quot;Ergonomic 4thgeneration initiative&quot;,
+    &quot;bs&quot;: &quot;Black month radio foreign hotel.&quot;
+  },
+  &quot;id&quot;: 11
+}
+2025-05-06_08-58-03 - INFO: updating user Olivia Black name to Zaphod
+2025-05-06_08-58-03 - INFO: Updating user: Zaphod...
+2025-05-06_08-58-03 - DEBUG: {
+  &quot;id&quot;: 11,
+  &quot;name&quot;: &quot;Zaphod&quot;
+}...
+2025-05-06_08-58-03 - DEBUG: Received in update_user: {
+  &quot;id&quot;: 11,
+  &quot;name&quot;: &quot;Zaphod&quot;
+}
+2025-05-06_08-58-03 - INFO: Deleting user: 11...
+2025-05-06_08-58-03 - DEBUG: Received status 200 in delete_user: {}
+<br/> -------------------------------Captured log call-------------------------------- <br/>INFO     anaApiTestLogger:test_users.py:121 Test CRUD user
+INFO     anaApiTestLogger:user_actions.py:69 Creating user: Olivia Black...
+DEBUG    anaApiTestLogger:user_actions.py:72 {
+  &quot;name&quot;: &quot;Olivia Black&quot;,
+  &quot;username&quot;: &quot;tanya69&quot;,
+  &quot;email&quot;: &quot;ztaylor@example.org&quot;,
+  &quot;address&quot;: {
+    &quot;street&quot;: &quot;82151 Lawrence Drive Suite 193&quot;,
+    &quot;suite&quot;: &quot;65110&quot;,
+    &quot;city&quot;: &quot;Lake Raymond&quot;,
+    &quot;zipcode&quot;: &quot;49850&quot;,
+    &quot;geo&quot;: {
+      &quot;lat&quot;: &quot;65.860561&quot;,
+      &quot;lng&quot;: &quot;-128.499956&quot;
+    }
+  },
+  &quot;phone&quot;: &quot;(243)997-4848x4603&quot;,
+  &quot;website&quot;: &quot;register&quot;,
+  &quot;company&quot;: {
+    &quot;name&quot;: &quot;Vazquez, Neal and Miller&quot;,
+    &quot;catch_phrase&quot;: &quot;Ergonomic 4thgeneration initiative&quot;,
+    &quot;bs&quot;: &quot;Black month radio foreign hotel.&quot;
+  }
+}...
+DEBUG    anaApiTestLogger:user_actions.py:74 Received in create_user: {
+  &quot;name&quot;: &quot;Olivia Black&quot;,
+  &quot;username&quot;: &quot;tanya69&quot;,
+  &quot;email&quot;: &quot;ztaylor@example.org&quot;,
+  &quot;address&quot;: {
+    &quot;street&quot;: &quot;82151 Lawrence Drive Suite 193&quot;,
+    &quot;suite&quot;: &quot;65110&quot;,
+    &quot;city&quot;: &quot;Lake Raymond&quot;,
+    &quot;zipcode&quot;: &quot;49850&quot;,
+    &quot;geo&quot;: {
+      &quot;lat&quot;: &quot;65.860561&quot;,
+      &quot;lng&quot;: &quot;-128.499956&quot;
+    }
+  },
+  &quot;phone&quot;: &quot;(243)997-4848x4603&quot;,
+  &quot;website&quot;: &quot;register&quot;,
+  &quot;company&quot;: {
+    &quot;name&quot;: &quot;Vazquez, Neal and Miller&quot;,
+    &quot;catch_phrase&quot;: &quot;Ergonomic 4thgeneration initiative&quot;,
+    &quot;bs&quot;: &quot;Black month radio foreign hotel.&quot;
+  },
+  &quot;id&quot;: 11
+}
+INFO     anaApiTestLogger:test_users.py:126 updating user Olivia Black name to Zaphod
+INFO     anaApiTestLogger:user_actions.py:95 Updating user: Zaphod...
+DEBUG    anaApiTestLogger:user_actions.py:96 {
+  &quot;id&quot;: 11,
+  &quot;name&quot;: &quot;Zaphod&quot;
+}...
+DEBUG    anaApiTestLogger:user_actions.py:98 Received in update_user: {
+  &quot;id&quot;: 11,
+  &quot;name&quot;: &quot;Zaphod&quot;
+}
+INFO     anaApiTestLogger:user_actions.py:117 Deleting user: 11...
+DEBUG    anaApiTestLogger:user_actions.py:119 Received status 200 in delete_user: {}<br/></div></td></tr></tbody></table></body></html>
