@@ -1,5 +1,5 @@
 API Regression Suite documentation
-=================
+==================================
 
 .. toctree::
    :maxdepth: 2

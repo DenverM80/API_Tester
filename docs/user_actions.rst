@@ -1,5 +1,5 @@
 actions\_user_actions module
-====================
+============================
 
 .. automodule:: actions.user_actions
    :members:

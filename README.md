@@ -39,4 +39,3 @@ The dataclass representation of a Users's properties is in [models/models.py](mo
 1. Wrap this project in a Docker container with alpine, python, and conda dependencies.
 2. Create instances of data classes using dicts to deserialize for known tests.
 3. Incorporate redis for a large DB cache to test performance.
-4. Build a local Django based API webserver to simulate replacing BizTalk.

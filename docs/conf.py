@@ -12,7 +12,6 @@ author = 'Denver Miller'
 
 import sys
 from pathlib import Path
-# sys.path.insert(0, str(Path('..', '../actions', '../models', '../utils', '../tests', '../utils').resolve()))
 sys.path.insert(0, str(Path('..').resolve()))
 
 # -- General configuration ---------------------------------------------------
