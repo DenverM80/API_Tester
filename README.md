@@ -15,12 +15,21 @@ This project automates testing for common REST operations.  Python 3.5+ is requi
 ## Howto run the tests
 `# pytest`
 
+## Howto create the docker container based on Ubuntu, Python 3.13, and MiniConda.
+Warning: the built image is 1.7GB
+```
+# docker build -t api-tester .
+# docker run --rm api-tester
+```
+
+## Howto generate documentation
+```
+# cd docs
+# make html
+```
+
 ## Howto view the documentation
 Auto generated code documentation can be view in [docs/_build/index.html](docs/_build/html/index.html)
-
-## Howto regenerate documentation
-`# cd docs`
-`# make html`
 
 ## Howto look at the test report
 A test report from the last pytest run can be found at [reports/report.html](reports/report.html)
