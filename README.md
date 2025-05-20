@@ -5,12 +5,8 @@ This project automates testing for common REST operations.  Python 3.5+ is requi
 ### With conda:
 
 ```
-# conda install conda-forge::faker
-# conda install anaconda::pytest
-# conda install conda-forge::pytest-html
-# conda install anaconda::requests
-# conda install sphinx
-# conda install conda-forge::sphinx-autodoc-typehints
+# conda env create -f python_3_13_environment.yml
+# conda activate py313
 ```
 
 ### With pip:
@@ -36,6 +32,5 @@ The logger utility configuration is in [utils/logger.py](utils/logger.py)
 The dataclass representation of a Users's properties is in [models/models.py](models/models.py)
 
 ## TODO
-1. Wrap this project in a Docker container with alpine, python, and conda dependencies.
-2. Create instances of data classes using dicts to deserialize for known tests.
-3. Incorporate redis for a large DB cache to test performance.
+1. Create instances of data classes using dicts to deserialize for known tests.
+2. Incorporate redis for a large DB cache to test performance.
